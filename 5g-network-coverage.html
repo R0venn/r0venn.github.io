@@ -1,0 +1,1684 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulation Réseau 5G</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .controls {
+            margin-bottom: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+        }
+        .control-group {
+            margin-right: 20px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .simulation-area {
+            position: relative;
+            width: 100%;
+            height: 600px;
+            border: 1px solid #ddd;
+            background-color: #f9f9f9;
+            overflow: hidden;
+        }
+        
+        /* Conteneur pour la simulation avec espace pour la légende */
+        .simulation-container {
+            position: relative;
+            display: flex;
+            align-items: stretch;
+            margin: 20px 0;
+        }
+        
+        /* Légende à gauche de la simulation */
+        .left-legend {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+        }
+        
+        .legend {
+            margin-top: 20px;
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .legend-color {
+            width: 20px;
+            height: 10px;
+            border-radius: 3px;
+        }
+        
+        /* Légende du dégradé de couverture */
+        .coverage-legend {
+            background-color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
+            width: 200px;
+            margin-right: 20px;
+        }
+        .coverage-legend-title {
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 16px;
+            color: #333;
+            border-bottom: 1px solid #eaeaea;
+            padding-bottom: 8px;
+        }
+        .legend-container {
+            display: flex;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+        .coverage-gradient {
+            height: 250px;
+            width: 40px;
+            margin-right: 20px;
+            border-radius: 4px;
+            background: linear-gradient(to bottom, #FF0000, #FFA500, #FFFF00, #00FF00);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            border: 1px solid #ddd;
+        }
+        .coverage-labels {
+            height: 250px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            font-size: 14px;
+        }
+        .coverage-label {
+            position: relative;
+            display: flex;
+            align-items: center;
+            margin: 5px 0;
+        }
+        .coverage-label:before {
+            content: '';
+            width: 15px;
+            height: 2px;
+            background-color: #555;
+            margin-right: 10px;
+        }
+        .signal-value {
+            color: #666;
+            font-size: 13px;
+            margin-top: 3px;
+            display: block;
+        }
+        .info-panel {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 10px;
+            border-radius: 4px;
+            box-shadow: 0 1px 5px rgba(0, 0, 0, 0.2);
+            font-size: 14px;
+            max-width: 250px;
+        }
+        .tooltip {
+            position: absolute;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            pointer-events: none;
+            z-index: 100;
+            white-space: nowrap;
+            transform: translate(10px, 10px);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .tooltip-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 15px;
+        }
+        .tooltip-label {
+            font-weight: bold;
+            color: #cccccc;
+        }
+        .tooltip-value {
+            text-align: right;
+        }
+        .tooltip-value.good {
+            color: #4CAF50;
+        }
+        .tooltip-value.medium {
+            color: #FFA500;
+        }
+        .tooltip-value.poor {
+            color: #FF6347;
+        }
+        label {
+            margin-right: 5px;
+        }
+        input[type="range"] {
+            width: 150px;
+        }
+        input[type="number"] {
+            width: 60px;
+        }
+        .control-group.gradient-controls {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        #show-gradient {
+            margin-right: 10px;
+        }
+        
+        /* Styles pour le tableau récapitulatif */
+        .users-table-container {
+            margin-top: 30px;
+            overflow-x: auto;
+        }
+        .users-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        .users-table th, .users-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+        .users-table th {
+            background-color: #f2f2f2;
+            position: sticky;
+            top: 0;
+        }
+        .users-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .users-table tr:hover {
+            background-color: #f0f0f0;
+        }
+        .table-good {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+        .table-medium {
+            color: #FFA500;
+            font-weight: bold;
+        }
+        .table-poor {
+            color: #FF6347;
+            font-weight: bold;
+        }
+        .table-controls {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+        .search-container {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        #table-search {
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 200px;
+        }
+        .sort-container {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        #sort-column, #sort-direction {
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        /* Styles pour les contrôles des antennes */
+        .antenna-controls {
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        
+        .antenna-header {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .antenna-selector {
+            margin-bottom: 10px;
+        }
+        
+        .control-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .control-tab {
+            padding: 5px 10px;
+            background-color: #e0e0e0;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .control-tab.active {
+            background-color: #4CAF50;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Simulation de Réseau 5G</h1>
+        
+        <div class="controls">
+            <!-- Contrôles des antennes -->
+            <div class="antenna-controls">
+                <div class="control-tabs">
+                    <div class="control-tab active" data-antenna="1">Antenne 1</div>
+                    <div class="control-tab" data-antenna="2">Antenne 2</div>
+                </div>
+                
+                <!-- Contrôles pour l'antenne 1 -->
+                <div class="antenna-panel" id="antenna1-panel">
+                    <div class="control-group">
+                        <label for="antenna1-power">Puissance de l'antenne 1 (dBm):</label>
+                        <input type="range" id="antenna1-power" min="20" max="60" value="40" step="1">
+                        <span id="power1-value">40 dBm</span>
+                    </div>
+                    <div class="control-group">
+                        <label for="antenna1-x">Position X:</label>
+                        <input type="range" id="antenna1-x" min="50" max="1150" value="600" step="10">
+                        <span id="x1-value">600</span>
+                    </div>
+                    <div class="control-group">
+                        <label for="antenna1-y">Position Y:</label>
+                        <input type="range" id="antenna1-y" min="50" max="550" value="300" step="10">
+                        <span id="y1-value">300</span>
+                    </div>
+                </div>
+                
+                <!-- Contrôles pour l'antenne 2 -->
+                <div class="antenna-panel" id="antenna2-panel" style="display: none;">
+                    <div class="control-group">
+                        <label for="antenna2-power">Puissance de l'antenne 2 (dBm):</label>
+                        <input type="range" id="antenna2-power" min="20" max="60" value="35" step="1">
+                        <span id="power2-value">35 dBm</span>
+                    </div>
+                    <div class="control-group">
+                        <label for="antenna2-x">Position X:</label>
+                        <input type="range" id="antenna2-x" min="50" max="1150" value="300" step="10">
+                        <span id="x2-value">300</span>
+                    </div>
+                    <div class="control-group">
+                        <label for="antenna2-y">Position Y:</label>
+                        <input type="range" id="antenna2-y" min="50" max="550" value="150" step="10">
+                        <span id="y2-value">150</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <label for="num-buildings">Nombre de bâtiments:</label>
+                <input type="number" id="num-buildings" min="1" max="50" value="10">
+            </div>
+            
+            <div class="control-group">
+                <label for="num-users">Nombre d'utilisateurs:</label>
+                <input type="number" id="num-users" min="5" max="200" value="50">
+            </div>
+            
+            <div class="control-group gradient-controls">
+                <input type="checkbox" id="show-gradient" checked>
+                <label for="show-gradient">Afficher dégradé de couverture</label>
+                <input type="range" id="gradient-opacity" min="0.1" max="0.9" value="0.6" step="0.1">
+                <span id="opacity-value">0.6</span>
+            </div>
+            
+            <button id="regenerate">Régénérer la simulation</button>
+        </div>
+        
+        <div class="simulation-container">
+            <!-- Légende à gauche -->
+            <div class="left-legend" id="coverage-legend-container">
+                <div class="coverage-legend">
+                    <div class="coverage-legend-title">Couverture du Signal 5G</div>
+                    <div class="legend-container">
+                        <div class="coverage-gradient"></div>
+                        <div class="coverage-labels">
+                            <div class="coverage-label">Fort <span class="signal-value">&gt; -70 dBm</span></div>
+                            <div class="coverage-label">Moyen <span class="signal-value">&gt; -90 dBm</span></div>
+                            <div class="coverage-label">Faible <span class="signal-value">&gt; -110 dBm</span></div>
+                            <div class="coverage-label">Pas de signal <span class="signal-value">&lt; -110 dBm</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Zone de simulation -->
+            <div class="simulation-area" id="simulation"></div>
+        </div>
+        
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #FF0000;"></div>
+                <span>Bon signal</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #FFA500;"></div>
+                <span>Signal moyen</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #00FF00;"></div>
+                <span>Signal faible</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #FF00FF;"></div>
+                <span>Shadowing (obstruction)</span>
+            </div>
+        </div>
+        
+        <div class="info-panel" id="info-panel">
+            <p>Utilisateurs connectés: <span id="connected-users">0</span>/<span id="total-users">50</span></p>
+            <p>Utilisateurs avec shadowing: <span id="shadowed-users">0</span></p>
+        </div>
+        
+        <div class="tooltip" id="tooltip"></div>
+    </div>
+    
+    <!-- Tableau récapitulatif des utilisateurs -->
+    <div class="users-table-container">
+        <div class="table-controls">
+            <div class="search-container">
+                <label for="table-search">Rechercher:</label>
+                <input type="text" id="table-search" placeholder="Filtrer les utilisateurs...">
+            </div>
+            <div class="sort-container">
+                <label for="sort-column">Trier par:</label>
+                <select id="sort-column">
+                    <option value="id">ID</option>
+                    <option value="distance">Distance</option>
+                    <option value="pathLoss">Path Loss</option>
+                    <option value="shadowingLoss">Shadowing</option>
+                    <option value="fadingLoss">Fading</option>
+                    <option value="signalStrength">Puissance reçue</option>
+                    <option value="noisePower">Bruit</option>
+                    <option value="snr" selected>SNR</option>
+                    <option value="dataRate">Débit</option>
+                </select>
+                <select id="sort-direction">
+                    <option value="asc">Croissant</option>
+                    <option value="desc" selected>Décroissant</option>
+                </select>
+            </div>
+        </div>
+        <table class="users-table" id="users-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Antenne</th>
+                    <th>Distance (m)</th>
+                    <th>Path Loss (dB)</th>
+                    <th>Shadowing (dB)</th>
+                    <th>Fading (dB)</th>
+                    <th>Type Fading</th>
+                    <th>Puissance reçue (dBm)</th>
+                    <th>Bruit (dBm)</th>
+                    <th>SNR (dB)</th>
+                    <th>Débit (Mbps)</th>
+                </tr>
+            </thead>
+            <tbody id="users-table-body">
+                <!-- Sera rempli dynamiquement -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        // Configuration
+        const CANVAS_WIDTH = document.getElementById('simulation').offsetWidth;
+        const CANVAS_HEIGHT = 600;
+        const DEFAULT_NUM_USERS = 50;
+        const USER_RADIUS = 5;
+        const ANTENNA_RADIUS = 10;
+        const BUILDING_MIN_SIZE = 30;
+        const BUILDING_MAX_SIZE = 80;
+        const MIN_SIGNAL_STRENGTH = -110; // dBm
+        
+        // Paramètres pour le calcul du bruit
+        const BOLTZMANN_CONSTANT = 1.38e-23; // Constante de Boltzmann en J/K
+        const TEMPERATURE = 290; // Température ambiante en Kelvin
+        const BANDWIDTH = 100e6; // Bande passante en Hz (100 MHz pour la 5G)
+        const NOISE_FIGURE = 7; // Figure de bruit du récepteur en dB
+        
+        // Classes pour les éléments de simulation
+        class Antenna {
+            constructor(x, y, power, id) {
+                this.x = x;
+                this.y = y;
+                this.power = power; // en dBm
+                this.radius = ANTENNA_RADIUS;
+                this.id = id; // Identifiant de l'antenne
+                this.color = id === 1 ? '#0066CC' : '#CC6600'; // Couleur différente pour chaque antenne
+            }
+            
+            draw(ctx) {
+                // Dessiner l'antenne
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+                ctx.strokeStyle = this.id === 1 ? '#003366' : '#663300';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                // Dessiner le mât de l'antenne
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y);
+                ctx.lineTo(this.x, this.y - 30);
+                ctx.lineWidth = 3;
+                ctx.stroke();
+                
+                // Dessiner les éléments radiants
+                ctx.beginPath();
+                ctx.moveTo(this.x - 15, this.y - 25);
+                ctx.lineTo(this.x + 15, this.y - 25);
+                ctx.stroke();
+                
+                ctx.beginPath();
+                ctx.moveTo(this.x - 10, this.y - 30);
+                ctx.lineTo(this.x + 10, this.y - 30);
+                ctx.stroke();
+                
+                // Afficher l'ID de l'antenne
+                ctx.fillStyle = '#FFFFFF';
+                ctx.font = '12px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(this.id.toString(), this.x, this.y);
+            }
+        }
+        
+        class User {
+            constructor(x, y, id) {
+                this.x = x;
+                this.y = y;
+                this.radius = USER_RADIUS;
+                this.signalStrength = 0; // sera calculé plus tard
+                this.isShadowed = false;
+                this.id = id;
+                this.distance = 0; // sera calculé plus tard
+                
+                // Nouvelles propriétés pour stocker les composantes de l'atténuation
+                this.pathLoss = 0;
+                this.shadowingLoss = 0;
+                this.fadingLoss = 0;
+                
+                // Propriétés pour le bruit et le SNR
+                this.noisePower = 0;
+                this.snr = 0;
+                
+                // Propriétés pour l'interférence et le SINR
+                this.interference = 0;
+                this.sinr = 0;
+                
+                // Propriétés pour la connexion multi-antennes
+                this.connectedAntennaId = 0; // ID de l'antenne à laquelle l'utilisateur est connecté
+                this.antennasSignals = {}; // Dictionnaire des signaux reçus de chaque antenne
+            }
+            
+            calculateThermalNoise() {
+                // Calcul du bruit thermique: N = k * T * B * NF
+                // k: constante de Boltzmann (1.38e-23 J/K)
+                // T: température ambiante en Kelvin (290K)
+                // B: bande passante en Hz
+                // NF: Noise Figure en linéaire
+                
+                // Convertir NF de dB à linéaire
+                const noiseFigureLinear = Math.pow(10, NOISE_FIGURE/10);
+                
+                // Calculer la puissance du bruit en Watts
+                const noiseWatts = BOLTZMANN_CONSTANT * TEMPERATURE * BANDWIDTH * noiseFigureLinear;
+                
+                // Convertir en dBm: 10 * log10(P) + 30
+                this.noisePower = 10 * Math.log10(noiseWatts) + 30;
+                
+                return this.noisePower;
+            }
+            
+            calculateSNR() {
+                // Calculer le bruit si non encore calculé
+                if (this.noisePower === 0) {
+                    this.calculateThermalNoise();
+                }
+                
+                // Convertir la puissance du signal de dBm à mW
+                const signalMW = Math.pow(10, this.signalStrength/10);
+                
+                // Convertir la puissance du bruit de dBm à mW
+                const noiseMW = Math.pow(10, this.noisePower/10);
+                
+                // Calculer le SNR en linéaire
+                const snrLinear = signalMW / noiseMW;
+                
+                // Convertir le SNR en dB
+                this.snr = 10 * Math.log10(snrLinear);
+                
+                return this.snr;
+            }
+            
+            calculateInterference() {
+                // Calculer l'interférence totale des autres antennes
+                this.interference = MIN_SIGNAL_STRENGTH - 10; // Valeur minimale par défaut
+                
+                // L'interférence est la somme des signaux des antennes auxquelles l'utilisateur n'est pas connecté
+                let totalInterferenceMW = 0;
+                
+                for (const antennaId in this.antennasSignals) {
+                    // Ne considérer que les antennes différentes de celle connectée
+                    if (parseInt(antennaId) !== this.connectedAntennaId) {
+                        const interferenceSignal = this.antennasSignals[antennaId].signalStrength;
+                        // Convertir en mW pour l'addition (uniquement si le signal est supérieur au minimum)
+                        if (interferenceSignal > MIN_SIGNAL_STRENGTH) {
+                            totalInterferenceMW += Math.pow(10, interferenceSignal/10);
+                        }
+                    }
+                }
+                
+                // Convertir la somme en dBm
+                if (totalInterferenceMW > 0) {
+                    this.interference = 10 * Math.log10(totalInterferenceMW);
+                }
+                
+                return this.interference;
+            }
+            
+            calculateSINR() {
+                // Calculer le SINR (Signal-to-Interference-plus-Noise Ratio)
+                // SINR = Signal / (Interference + Noise)
+                
+                // S'assurer que l'interférence est calculée
+                this.calculateInterference();
+                
+                // S'assurer que le bruit est calculé
+                if (this.noisePower === 0) {
+                    this.calculateThermalNoise();
+                }
+                
+                // Convertir le signal en mW
+                const signalMW = Math.pow(10, this.signalStrength/10);
+                
+                // Convertir l'interférence en mW
+                const interferenceMW = this.interference > MIN_SIGNAL_STRENGTH ? 
+                    Math.pow(10, this.interference/10) : 0;
+                
+                // Convertir le bruit en mW
+                const noiseMW = Math.pow(10, this.noisePower/10);
+                
+                // Calculer le SINR en linéaire
+                const sinrLinear = signalMW / (interferenceMW + noiseMW);
+                
+                // Convertir le SINR en dB
+                this.sinr = 10 * Math.log10(sinrLinear);
+                
+                return this.sinr;
+            }
+            
+            draw(ctx) {
+                // Dessiner l'utilisateur
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = '#555555';
+                ctx.fill();
+                ctx.strokeStyle = '#333333';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            }
+            
+            calculateSignalStrength(antennas, buildings) {
+                // Réinitialiser les signaux
+                this.antennasSignals = {};
+                let bestSignal = MIN_SIGNAL_STRENGTH - 10; // Signal minimal moins 10dB
+                let bestAntennaId = 0;
+                
+                // Calculer le signal pour chaque antenne
+                for (const antenna of antennas) {
+                    // Calculer la distance entre l'utilisateur et l'antenne en pixels
+                    const distance = Math.sqrt((this.x - antenna.x) ** 2 + (this.y - antenna.y) ** 2);
+                    
+                    // Convertir la distance en km (approximation)
+                    const distanceInKm = distance / 1000;
+                    
+                    // Fréquence 5G fixe en MHz
+                    const frequency = 3500; // 3.5 GHz (fréquence typique 5G)
+                    
+                    // Formule de Path Loss spécifique
+                    // FSPL (dB) = 20log10(d) + 20log10(f) + 32.45
+                    // d : distance en km
+                    // f : fréquence en MHz
+                    const pathLoss = 20 * Math.log10(distanceInKm) + 20 * Math.log10(frequency) + 32.45;
+                    
+                    // Vérifier si le signal traverse des bâtiments (shadowing)
+                    let isShadowed = false;
+                    let shadowingLoss = 0;
+                    let fadingLoss = 0;
+                    
+                    for (const building of buildings) {
+                        if (this.lineCrossesBuilding(antenna.x, antenna.y, this.x, this.y, building)) {
+                            isShadowed = true;
+                            // Perte fixe de 20 dB par bâtiment traversé
+                            shadowingLoss = 20;
+                            break;
+                        }
+                    }
+                    
+                    // Calculer le fading selon le modèle approprié
+                    if (isShadowed) {
+                        // Fading de Rayleigh (sans vue directe)
+                        fadingLoss = -Math.log(Math.random()) * 8;
+                    } else {
+                        // Fading de Rice (vue directe)
+                        fadingLoss = -Math.log(Math.random() + 0.5) * 4;
+                    }
+                    
+                    // Limiter le fading à des valeurs raisonnables
+                    fadingLoss = Math.min(fadingLoss, 30);
+                    
+                    // Calculer l'atténuation totale selon le modèle
+                    let attenuation = 0;
+                    if (isShadowed) {
+                        // Si bâtiment entre les deux : Atténuation = Pathloss + Shadowing + Fading de Rayleigh
+                        attenuation = pathLoss + shadowingLoss + fadingLoss;
+                    } else {
+                        // Si vue directe : Atténuation = Pathloss + Fading de Rice
+                        attenuation = pathLoss + fadingLoss;
+                    }
+                    
+                    // Calculer le signal reçu de cette antenne
+                    const signalStrength = antenna.power - attenuation;
+                    
+                    // Stocker les informations de signal pour cette antenne
+                    this.antennasSignals[antenna.id] = {
+                        distance: distance,
+                        pathLoss: pathLoss,
+                        shadowingLoss: shadowingLoss,
+                        fadingLoss: fadingLoss,
+                        isShadowed: isShadowed,
+                        signalStrength: signalStrength
+                    };
+                    
+                    // Vérifier si c'est le meilleur signal
+                    if (signalStrength > bestSignal) {
+                        bestSignal = signalStrength;
+                        bestAntennaId = antenna.id;
+                        
+                        // Mettre à jour les propriétés principales avec les valeurs de la meilleure antenne
+                        this.distance = distance;
+                        this.pathLoss = pathLoss;
+                        this.shadowingLoss = shadowingLoss;
+                        this.fadingLoss = fadingLoss;
+                        this.signalStrength = signalStrength;
+                        this.isShadowed = isShadowed;
+                    }
+                }
+                
+                // Définir l'antenne à laquelle l'utilisateur est connecté
+                this.connectedAntennaId = bestAntennaId;
+                
+                // Calculer le bruit thermique, le SNR, l'interférence et le SINR
+                this.calculateThermalNoise();
+                this.calculateSNR();
+                this.calculateInterference();
+                this.calculateSINR();
+                
+                return this.signalStrength;
+            }
+            
+            calculateDataRate() {
+                // Utiliser le SINR au lieu du SNR pour un calcul plus précis
+                
+                // Convertir SINR de dB à linéaire
+                const sinrLinear = Math.pow(10, this.sinr/10);
+                
+                // Bande passante en Hz (100 MHz pour la 5G)
+                const bandwidth = BANDWIDTH;
+                
+                // Calculer la capacité théorique selon Shannon (en bits/s)
+                const capacity = bandwidth * Math.log2(1 + sinrLinear);
+                
+                // Convertir en Mbps et appliquer une efficacité spectrale réaliste (env. 70% de la capacité théorique)
+                const efficacite = 0.7;
+                const debitMbps = (capacity * efficacite) / 1e6;
+                
+                // Limiter à des valeurs réalistes pour la 5G
+                return Math.min(Math.round(debitMbps), 1000);
+            }
+            
+            getSignalCategory() {
+                // Catégoriser la qualité du signal basée sur le SINR plutôt que sur le SNR
+                if (this.sinr > 20) {
+                    return "good";
+                } else if (this.sinr > 10) {
+                    return "medium";
+                } else {
+                    return "poor";
+                }
+            }
+            
+            lineCrossesBuilding(x1, y1, x2, y2, building) {
+                // Vérifier si la ligne de l'antenne à l'utilisateur traverse le bâtiment
+                const lines = [
+                    // Ligne supérieure du bâtiment
+                    {x1: building.x, y1: building.y, x2: building.x + building.width, y2: building.y},
+                    // Ligne droite du bâtiment
+                    {x1: building.x + building.width, y1: building.y, x2: building.x + building.width, y2: building.y + building.height},
+                    // Ligne inférieure du bâtiment
+                    {x1: building.x, y1: building.y + building.height, x2: building.x + building.width, y2: building.y + building.height},
+                    // Ligne gauche du bâtiment
+                    {x1: building.x, y1: building.y, x2: building.x, y2: building.y + building.height}
+                ];
+                
+                for (const line of lines) {
+                    if (this.lineSegmentsIntersect(x1, y1, x2, y2, line.x1, line.y1, line.x2, line.y2)) {
+                        return true;
+                    }
+                }
+                
+                return false;
+            }
+            
+            lineSegmentsIntersect(x1, y1, x2, y2, x3, y3, x4, y4) {
+                const denominator = ((y4 - y3) * (x2 - x1)) - ((x4 - x3) * (y2 - y1));
+                
+                if (denominator === 0) {
+                    return false;
+                }
+                
+                const ua = (((x4 - x3) * (y1 - y3)) - ((y4 - y3) * (x1 - x3))) / denominator;
+                const ub = (((x2 - x1) * (y1 - y3)) - ((y2 - y1) * (x1 - x3))) / denominator;
+                
+                return (ua >= 0 && ua <= 1) && (ub >= 0 && ub <= 1);
+            }
+            
+            isConnected() {
+                // Un utilisateur est considéré comme connecté si son signal est supérieur au seuil minimal
+                return this.signalStrength > MIN_SIGNAL_STRENGTH;
+            }
+            
+            getConnectedAntenna(antennas) {
+                return antennas.find(antenna => antenna.id === this.connectedAntennaId);
+            }
+        }
+        
+        class Building {
+            constructor(x, y, width, height) {
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.height = height;
+            }
+            
+            draw(ctx) {
+                // Dessiner le bâtiment
+                ctx.fillStyle = '#BBBBBB';
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+                
+                // Ajouter des fenêtres pour donner un aspect plus réaliste
+                const windowSize = 5;
+                const windowSpacing = 10;
+                ctx.fillStyle = '#FFFFFF';
+                
+                for (let wx = this.x + 5; wx < this.x + this.width - windowSize; wx += windowSpacing) {
+                    for (let wy = this.y + 5; wy < this.y + this.height - windowSize; wy += windowSpacing) {
+                        ctx.fillRect(wx, wy, windowSize, windowSize);
+                    }
+                }
+                
+                // Contour du bâtiment
+                ctx.strokeStyle = '#999999';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(this.x, this.y, this.width, this.height);
+            }
+            
+            intersects(other) {
+                // Vérifier si ce bâtiment en chevauche un autre
+                return !(
+                    this.x + this.width < other.x ||
+                    other.x + other.width < this.x ||
+                    this.y + this.height < other.y ||
+                    other.y + other.height < this.y
+                );
+            }
+            
+            containsPoint(x, y) {
+                // Vérifier si un point est à l'intérieur du bâtiment
+                return (
+                    x >= this.x &&
+                    x <= this.x + this.width &&
+                    y >= this.y &&
+                    y <= this.y + this.height
+                );
+            }
+        }
+        
+        // Configuration de la simulation
+        class Simulation {
+            constructor() {
+                this.canvas = document.createElement('canvas');
+                this.canvas.width = CANVAS_WIDTH;
+                this.canvas.height = CANVAS_HEIGHT;
+                document.getElementById('simulation').appendChild(this.canvas);
+                this.ctx = this.canvas.getContext('2d');
+                
+                this.antennas = [
+                    new Antenna(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2, 40, 1),
+                    new Antenna(CANVAS_WIDTH / 4, CANVAS_HEIGHT / 4, 35, 2)
+                ];
+                this.users = [];
+                this.buildings = [];
+                this.hoveredUser = null;
+                this.showGradient = true;
+                this.gradientOpacity = 0.6;
+                this.activeAntennaTab = 1;
+                
+                this.tooltip = document.getElementById('tooltip');
+                
+                this.initControls();
+                this.generateSimulation();
+                this.render();
+                this.setupMouseEvents();
+            }
+            
+            setupMouseEvents() {
+                this.canvas.addEventListener('mousemove', (e) => {
+                    const rect = this.canvas.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    
+                    // Rechercher l'utilisateur survolé
+                    let hoveredUser = null;
+                    for (const user of this.users) {
+                        const distance = Math.sqrt((x - user.x) ** 2 + (y - user.y) ** 2);
+                        if (distance <= user.radius * 2) {
+                            hoveredUser = user;
+                            break;
+                        }
+                    }
+                    
+                    if (hoveredUser) {
+                        // Afficher l'info-bulle
+                        this.showTooltip(hoveredUser, e.clientX, e.clientY);
+                        this.hoveredUser = hoveredUser;
+                    } else {
+                        // Cacher l'info-bulle
+                        this.hideTooltip();
+                        this.hoveredUser = null;
+                    }
+                    
+                    // Re-dessiner la simulation pour mettre en évidence l'utilisateur survolé
+                    this.render();
+                });
+                
+                this.canvas.addEventListener('mouseout', () => {
+                    this.hideTooltip();
+                    this.hoveredUser = null;
+                    this.render();
+                });
+            }
+            
+            showTooltip(user, clientX, clientY) {
+                // Formater les informations de l'utilisateur pour l'info-bulle
+                const dataRate = user.calculateDataRate();
+                const signalCategory = user.getSignalCategory();
+                
+                // Convertir la distance en mètres pour l'affichage
+                const distanceInMeters = (user.distance / 10).toFixed(1); // Approximation pixels → mètres
+                
+                // Afficher les valeurs de path loss, shadowing et fading
+                const pathLoss = user.pathLoss.toFixed(2);
+                const shadowingValue = user.isShadowed ? user.shadowingLoss.toFixed(2) + " dB" : "0 dB";
+                const fadingValue = user.fadingLoss.toFixed(2) + " dB";
+                const fadingType = user.isShadowed ? "Rayleigh" : "Rice";
+                
+                // Calcul de l'atténuation totale
+                const attenuation = (user.pathLoss + user.shadowingLoss + user.fadingLoss).toFixed(2);
+                
+                // Afficher le bruit thermique, le SNR, l'interférence et le SINR
+                const noisePower = user.noisePower.toFixed(2);
+                const snr = user.snr.toFixed(2);
+                const interference = user.interference > MIN_SIGNAL_STRENGTH ? user.interference.toFixed(2) : "Négligeable";
+                const sinr = user.sinr.toFixed(2);
+                
+                // Déterminer la classe de SINR
+                let sinrCategory = "poor";
+                if (user.sinr > 20) {
+                    sinrCategory = "good";
+                } else if (user.sinr > 10) {
+                    sinrCategory = "medium";
+                }
+                
+                // Informations sur l'antenne connectée
+                const connectedAntennaInfo = `
+                    <div class="tooltip-row">
+                        <span class="tooltip-label">Antenne connectée:</span>
+                        <span class="tooltip-value">${user.connectedAntennaId}</span>
+                    </div>
+                `;
+                
+                this.tooltip.innerHTML = `
+                    <div class="tooltip-row">
+                        <span class="tooltip-label">Utilisateur ID:</span>
+                        <span class="tooltip-value">${user.id}</span>
+                    </div>
+                    ${connectedAntennaInfo}
+                    <div class="tooltip-row">
+                        <span class="tooltip-label">Distance:</span>
+                        <span class="tooltip-value">${distanceInMeters} m</span>
+                    </div>
+                    <div class="tooltip-row">
+                        <span class="tooltip-label">Path Loss:</span>
+                        <span class="tooltip-value">${pathLoss} dB</span>
+                    </div>
+                    <div class="tooltip-row">
+                        <span class="tooltip-label">Shadowing:</span>
+                        <span class="tooltip-value">${shadowingValue}</span>
+                    </div>
+                    <div class="tooltip-row">
+                        <span class="tooltip-label">Fading (${fadingType}):</span>
+                        <span class="tooltip-value">${fadingValue}</span>
+                    </div>
+                    <div class="tooltip-row">
+                        <span class="tooltip-label">Atténuation totale:</span>
+                        <span class="tooltip-value">${attenuation} dB</span>
+                    </div>
+                    <div class="tooltip-row">
+                        <span class="tooltip-label">Puissance reçue:</span>
+                        <span class="tooltip-value ${signalCategory}">${user.signalStrength.toFixed(1)} dBm</span>
+                    </div>
+                    <div class="tooltip-row">
+                        <span class="tooltip-label">Bruit thermique:</span>
+                        <span class="tooltip-value">${noisePower} dBm</span>
+                    </div>
+                    <div class="tooltip-row">
+                        <span class="tooltip-label">Interférence:</span>
+                        <span class="tooltip-value">${interference} dBm</span>
+                    </div>
+                    <div class="tooltip-row">
+                        <span class="tooltip-label">SNR:</span>
+                        <span class="tooltip-value">${snr} dB</span>
+                    </div>
+                    <div class="tooltip-row">
+                        <span class="tooltip-label">SINR:</span>
+                        <span class="tooltip-value ${sinrCategory}">${sinr} dB</span>
+                    </div>
+                    <div class="tooltip-row">
+                        <span class="tooltip-label">Débit estimé:</span>
+                        <span class="tooltip-value ${signalCategory}">${dataRate} Mbps</span>
+                    </div>
+                `;
+                
+                // Positionner l'info-bulle
+                const rect = document.querySelector('.simulation-area').getBoundingClientRect();
+                const tooltipX = clientX - rect.left;
+                const tooltipY = clientY - rect.top;
+                
+                this.tooltip.style.left = `${tooltipX}px`;
+                this.tooltip.style.top = `${tooltipY}px`;
+                this.tooltip.style.opacity = '1';
+            }
+            
+            hideTooltip() {
+                this.tooltip.style.opacity = '0';
+            }
+            
+            calculateLatency(user) {
+                // Cette fonction a été supprimée car la latence n'est plus utilisée
+                return 0;
+            }
+            
+            initControls() {
+                // Gestionnaires d'événements pour les onglets d'antennes
+                const antennaTabs = document.querySelectorAll('.control-tab');
+                antennaTabs.forEach(tab => {
+                    tab.addEventListener('click', () => {
+                        const antennaId = parseInt(tab.getAttribute('data-antenna'));
+                        this.activeAntennaTab = antennaId;
+                        
+                        // Activer l'onglet cliqué et désactiver les autres
+                        antennaTabs.forEach(t => t.classList.remove('active'));
+                        tab.classList.add('active');
+                        
+                        // Afficher le panneau de contrôle correspondant
+                        document.getElementById('antenna1-panel').style.display = antennaId === 1 ? 'block' : 'none';
+                        document.getElementById('antenna2-panel').style.display = antennaId === 2 ? 'block' : 'none';
+                    });
+                });
+                
+                // Contrôles pour l'antenne 1
+                const antenna1PowerSlider = document.getElementById('antenna1-power');
+                const power1ValueSpan = document.getElementById('power1-value');
+                const antenna1XSlider = document.getElementById('antenna1-x');
+                const x1ValueSpan = document.getElementById('x1-value');
+                const antenna1YSlider = document.getElementById('antenna1-y');
+                const y1ValueSpan = document.getElementById('y1-value');
+                
+                antenna1PowerSlider.value = this.antennas[0].power;
+                power1ValueSpan.textContent = `${this.antennas[0].power} dBm`;
+                antenna1XSlider.value = this.antennas[0].x;
+                x1ValueSpan.textContent = this.antennas[0].x;
+                antenna1YSlider.value = this.antennas[0].y;
+                y1ValueSpan.textContent = this.antennas[0].y;
+                
+                antenna1PowerSlider.addEventListener('input', () => {
+                    const power = parseInt(antenna1PowerSlider.value);
+                    power1ValueSpan.textContent = `${power} dBm`;
+                    this.antennas[0].power = power;
+                    this.updateSignals();
+                    this.render();
+                });
+                
+                antenna1XSlider.addEventListener('input', () => {
+                    const x = parseInt(antenna1XSlider.value);
+                    x1ValueSpan.textContent = x;
+                    this.antennas[0].x = x;
+                    this.updateSignals();
+                    this.render();
+                });
+                
+                antenna1YSlider.addEventListener('input', () => {
+                    const y = parseInt(antenna1YSlider.value);
+                    y1ValueSpan.textContent = y;
+                    this.antennas[0].y = y;
+                    this.updateSignals();
+                    this.render();
+                });
+                
+                // Contrôles pour l'antenne 2
+                const antenna2PowerSlider = document.getElementById('antenna2-power');
+                const power2ValueSpan = document.getElementById('power2-value');
+                const antenna2XSlider = document.getElementById('antenna2-x');
+                const x2ValueSpan = document.getElementById('x2-value');
+                const antenna2YSlider = document.getElementById('antenna2-y');
+                const y2ValueSpan = document.getElementById('y2-value');
+                
+                antenna2PowerSlider.value = this.antennas[1].power;
+                power2ValueSpan.textContent = `${this.antennas[1].power} dBm`;
+                antenna2XSlider.value = this.antennas[1].x;
+                x2ValueSpan.textContent = this.antennas[1].x;
+                antenna2YSlider.value = this.antennas[1].y;
+                y2ValueSpan.textContent = this.antennas[1].y;
+                
+                antenna2PowerSlider.addEventListener('input', () => {
+                    const power = parseInt(antenna2PowerSlider.value);
+                    power2ValueSpan.textContent = `${power} dBm`;
+                    this.antennas[1].power = power;
+                    this.updateSignals();
+                    this.render();
+                });
+                
+                antenna2XSlider.addEventListener('input', () => {
+                    const x = parseInt(antenna2XSlider.value);
+                    x2ValueSpan.textContent = x;
+                    this.antennas[1].x = x;
+                    this.updateSignals();
+                    this.render();
+                });
+                
+                antenna2YSlider.addEventListener('input', () => {
+                    const y = parseInt(antenna2YSlider.value);
+                    y2ValueSpan.textContent = y;
+                    this.antennas[1].y = y;
+                    this.updateSignals();
+                    this.render();
+                });
+                
+                const numBuildingsInput = document.getElementById('num-buildings');
+                const numUsersInput = document.getElementById('num-users');
+                const regenerateButton = document.getElementById('regenerate');
+                const showGradientCheckbox = document.getElementById('show-gradient');
+                const gradientOpacitySlider = document.getElementById('gradient-opacity');
+                const opacityValueSpan = document.getElementById('opacity-value');
+                const sortColumnSelect = document.getElementById('sort-column');
+                const sortDirectionSelect = document.getElementById('sort-direction');
+                const tableSearchInput = document.getElementById('table-search');
+                
+                showGradientCheckbox.addEventListener('change', () => {
+                    this.showGradient = showGradientCheckbox.checked;
+                    this.render();
+                });
+                
+                gradientOpacitySlider.addEventListener('input', () => {
+                    const opacity = parseFloat(gradientOpacitySlider.value);
+                    opacityValueSpan.textContent = opacity.toString();
+                    this.gradientOpacity = opacity;
+                    this.render();
+                });
+                
+                regenerateButton.addEventListener('click', () => {
+                    const numBuildings = parseInt(numBuildingsInput.value);
+                    const numUsers = parseInt(numUsersInput.value);
+                    this.generateSimulation(numBuildings, numUsers);
+                    this.render();
+                });
+                
+                // Gestionnaires d'événements pour le tri et la recherche du tableau
+                if (sortColumnSelect && sortDirectionSelect) {
+                    sortColumnSelect.addEventListener('change', () => this.updateUsersTable());
+                    sortDirectionSelect.addEventListener('change', () => this.updateUsersTable());
+                }
+                
+                if (tableSearchInput) {
+                    tableSearchInput.addEventListener('input', () => this.updateUsersTable());
+                }
+            }
+            
+            drawCoverageGradient() {
+                if (!this.showGradient) return;
+                
+                const ctx = this.ctx;
+                const antennaRange = Math.max(CANVAS_WIDTH, CANVAS_HEIGHT);
+                
+                // Pour chaque antenne, dessiner son dégradé de couverture
+                for (const antenna of this.antennas) {
+                    // Créer un dégradé radial depuis l'antenne
+                    const gradient = ctx.createRadialGradient(
+                        antenna.x, antenna.y, 0,
+                        antenna.x, antenna.y, antennaRange
+                    );
+                    
+                    // Ajuster les couleurs en fonction de la puissance de l'antenne
+                    const baseColor = antenna.id === 1 ? 
+                        [255, 0, 0] : // Rouge pour l'antenne 1
+                        [0, 0, 255];  // Bleu pour l'antenne 2
+                        
+                    gradient.addColorStop(0, `rgba(${baseColor[0]}, ${baseColor[1]}, ${baseColor[2]}, ${this.gradientOpacity})`);
+                    
+                    // Couleurs intermédiaires
+                    const secondColor = antenna.id === 1 ? 
+                        [255, 165, 0] : // Orange pour l'antenne 1
+                        [0, 165, 255];  // Bleu clair pour l'antenne 2
+                        
+                    gradient.addColorStop(0.3, `rgba(${secondColor[0]}, ${secondColor[1]}, ${secondColor[2]}, ${this.gradientOpacity})`);
+                    
+                    // Ajuster la taille du dégradé en fonction de la puissance
+                    const powerFactor = (antenna.power - 20) / 40; // Normaliser entre 0 et 1
+                    const yellowStop = 0.3 + powerFactor * 0.3;
+                    
+                    const thirdColor = antenna.id === 1 ? 
+                        [255, 255, 0] : // Jaune pour l'antenne 1
+                        [0, 255, 255];  // Cyan pour l'antenne 2
+                        
+                    gradient.addColorStop(yellowStop, `rgba(${thirdColor[0]}, ${thirdColor[1]}, ${thirdColor[2]}, ${this.gradientOpacity})`);
+                    
+                    const greenStop = Math.min(0.9, yellowStop + 0.3);
+                    
+                    const fourthColor = antenna.id === 1 ? 
+                        [0, 255, 0] : // Vert pour l'antenne 1
+                        [0, 255, 128]; // Vert-bleu pour l'antenne 2
+                        
+                    gradient.addColorStop(greenStop, `rgba(${fourthColor[0]}, ${fourthColor[1]}, ${fourthColor[2]}, ${this.gradientOpacity * 0.8})`);
+                    
+                    gradient.addColorStop(1, `rgba(0, 0, 0, 0)`); // Transparent à la limite
+                    
+                    ctx.globalCompositeOperation = 'lighten'; // 'lighten' au lieu de 'multiply' pour bien mélanger les couleurs
+                    
+                    // Dessiner le dégradé
+                    ctx.fillStyle = gradient;
+                    ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+                }
+                
+                ctx.globalCompositeOperation = 'source-over'; // Remettre en mode normal
+                
+                // Dessiner des cercles concentriques pour indiquer la distance
+                // Faire cela pour chaque antenne avec sa couleur
+                for (const antenna of this.antennas) {
+                    ctx.strokeStyle = antenna.id === 1 ? 
+                        'rgba(255, 255, 255, 0.15)' : 
+                        'rgba(200, 255, 255, 0.15)';
+                    ctx.lineWidth = 1;
+                    
+                    const radiusStep = 50;
+                    const maxRadius = Math.sqrt(CANVAS_WIDTH * CANVAS_WIDTH + CANVAS_HEIGHT * CANVAS_HEIGHT) / 2;
+                    
+                    for (let radius = radiusStep; radius <= maxRadius; radius += radiusStep) {
+                        ctx.beginPath();
+                        ctx.arc(antenna.x, antenna.y, radius, 0, Math.PI * 2);
+                        ctx.stroke();
+                    }
+                }
+            }
+            
+            generateSimulation(numBuildings = 10, numUsers = DEFAULT_NUM_USERS) {
+                // Mettre à jour l'affichage du nombre total d'utilisateurs
+                document.getElementById('total-users').textContent = numUsers;
+                
+                // Conserver les positions des antennes
+                const antennaPositions = this.antennas.map(antenna => ({
+                    x: antenna.x,
+                    y: antenna.y,
+                    power: antenna.power,
+                    id: antenna.id
+                }));
+                
+                // Créer les antennes avec les positions sauvegardées ou par défaut
+                this.antennas = [
+                    new Antenna(
+                        antennaPositions[0]?.x || CANVAS_WIDTH / 2,
+                        antennaPositions[0]?.y || CANVAS_HEIGHT / 2,
+                        antennaPositions[0]?.power || 40,
+                        1
+                    ),
+                    new Antenna(
+                        antennaPositions[1]?.x || CANVAS_WIDTH / 4,
+                        antennaPositions[1]?.y || CANVAS_HEIGHT / 4,
+                        antennaPositions[1]?.power || 35,
+                        2
+                    )
+                ];
+                
+                // Générer les bâtiments d'abord
+                this.buildings = [];
+                let attempts = 0;
+                const maxAttempts = 1000;
+                
+                while (this.buildings.length < numBuildings && attempts < maxAttempts) {
+                    attempts++;
+                    
+                    const width = BUILDING_MIN_SIZE + Math.random() * (BUILDING_MAX_SIZE - BUILDING_MIN_SIZE);
+                    const height = BUILDING_MIN_SIZE + Math.random() * (BUILDING_MAX_SIZE - BUILDING_MIN_SIZE);
+                    const x = Math.random() * (CANVAS_WIDTH - width);
+                    const y = Math.random() * (CANVAS_HEIGHT - height);
+                    
+                    const newBuilding = new Building(x, y, width, height);
+                    
+                    // Vérifier si le bâtiment chevauche une des antennes
+                    let valid = true;
+                    
+                    // Ne pas placer de bâtiment sur aucune des antennes
+                    const antennaBuffer = 30; // Distance de sécurité autour de l'antenne
+                    
+                    for (const antenna of this.antennas) {
+                        if (Math.abs(x + width/2 - antenna.x) < antennaBuffer + width / 2 &&
+                            Math.abs(y + height/2 - antenna.y) < antennaBuffer + height / 2) {
+                            valid = false;
+                            break;
+                        }
+                    }
+                    
+                    // Vérifier le chevauchement avec d'autres bâtiments
+                    if (valid) {
+                        for (const building of this.buildings) {
+                            if (newBuilding.intersects(building)) {
+                                valid = false;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if (valid) {
+                        this.buildings.push(newBuilding);
+                    }
+                }
+                
+                // Ensuite, générer les utilisateurs en évitant les bâtiments
+                this.users = [];
+                for (let i = 0; i < numUsers; i++) {
+                    let x, y;
+                    let isValid = false;
+                    let attemptCount = 0;
+                    const maxUserAttempts = 100;
+                    
+                    // S'assurer que l'utilisateur n'est pas placé dans un bâtiment
+                    while (!isValid && attemptCount < maxUserAttempts) {
+                        attemptCount++;
+                        
+                        // Choisir aléatoirement une des antennes pour répartir les utilisateurs
+                        const referenceAntenna = Math.random() < 0.5 ? this.antennas[0] : this.antennas[1];
+                        
+                        // Utiliser une distribution plus concentrée autour de l'antenne de référence
+                        const distance = Math.random() * CANVAS_WIDTH * 0.4; // Rayon maximal
+                        const angle = Math.random() * Math.PI * 2;
+                        
+                        x = referenceAntenna.x + distance * Math.cos(angle);
+                        y = referenceAntenna.y + distance * Math.sin(angle);
+                        
+                        // Vérifier les limites du canvas
+                        if (x < USER_RADIUS || x > CANVAS_WIDTH - USER_RADIUS ||
+                            y < USER_RADIUS || y > CANVAS_HEIGHT - USER_RADIUS) {
+                            continue;
+                        }
+                        
+                        // Vérifier si l'utilisateur est dans un bâtiment
+                        isValid = true;
+                        for (const building of this.buildings) {
+                            if (building.containsPoint(x, y)) {
+                                isValid = false;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    // Si on a dépassé le nombre maximum de tentatives, placer l'utilisateur quelque part sans vérification
+                    if (!isValid) {
+                        x = Math.random() * CANVAS_WIDTH;
+                        y = Math.random() * CANVAS_HEIGHT;
+                    }
+                    
+                    this.users.push(new User(x, y, i + 1));
+                }
+                
+                this.updateSignals();
+            }
+            
+            updateSignals() {
+                let connectedCount = 0;
+                let shadowedCount = 0;
+                
+                for (const user of this.users) {
+                    user.calculateSignalStrength(this.antennas, this.buildings);
+                    if (user.isConnected()) {
+                        connectedCount++;
+                    }
+                    if (user.isShadowed) {
+                        shadowedCount++;
+                    }
+                }
+                
+                // Mettre à jour le panneau d'information
+                document.getElementById('connected-users').textContent = connectedCount;
+                document.getElementById('shadowed-users').textContent = shadowedCount;
+                
+                // Mettre à jour le tableau des utilisateurs
+                this.updateUsersTable();
+            }
+            
+            updateUsersTable() {
+                const tableBody = document.getElementById('users-table-body');
+                if (!tableBody) return; // Si le tableau n'existe pas encore
+                
+                // Vider le tableau
+                tableBody.innerHTML = '';
+                
+                // Récupérer les options de tri
+                const sortColumn = document.getElementById('sort-column').value;
+                const sortDirection = document.getElementById('sort-direction').value;
+                const searchTerm = document.getElementById('table-search').value.toLowerCase();
+                
+                // Trier les utilisateurs
+                const sortedUsers = [...this.users].sort((a, b) => {
+                    let aValue, bValue;
+                    
+                    // Gestion spéciale pour distance (conversion en mètres)
+                    if (sortColumn === 'distance') {
+                        aValue = a.distance / 10; // Conversion approximative pixels → mètres
+                        bValue = b.distance / 10;
+                    } else {
+                        aValue = a[sortColumn];
+                        bValue = b[sortColumn];
+                    }
+                    
+                    if (sortDirection === 'asc') {
+                        return aValue - bValue;
+                    } else {
+                        return bValue - aValue;
+                    }
+                });
+                
+                // Filtrer les utilisateurs
+                const filteredUsers = sortedUsers.filter(user => {
+                    if (!searchTerm) return true;
+                    return user.id.toString().includes(searchTerm);
+                });
+                
+                // Ajouter une colonne pour l'ID de l'antenne connectée dans l'en-tête du tableau
+                const tableHeader = document.querySelector('#users-table thead tr');
+                if (tableHeader && !document.getElementById('antenna-id-header')) {
+                    const antennaCell = document.createElement('th');
+                    antennaCell.textContent = 'Antenne';
+                    antennaCell.id = 'antenna-id-header';
+                    tableHeader.insertBefore(antennaCell, tableHeader.children[1]); // Insérer après l'ID de l'utilisateur
+                }
+                
+                // Ajouter les colonnes d'interférence et SINR dans l'en-tête du tableau si elles n'existent pas
+                if (tableHeader) {
+                    // Vérifier et ajouter la colonne pour l'interférence
+                    if (!document.getElementById('interference-header')) {
+                        const interferenceCell = document.createElement('th');
+                        interferenceCell.textContent = 'Interférence (dBm)';
+                        interferenceCell.id = 'interference-header';
+                        tableHeader.insertBefore(interferenceCell, tableHeader.querySelector('th:nth-child(10)')); // Insérer avant la colonne SNR
+                    }
+                    
+                    // Vérifier et ajouter la colonne pour le SINR
+                    if (!document.getElementById('sinr-header')) {
+                        const sinrCell = document.createElement('th');
+                        sinrCell.textContent = 'SINR (dB)';
+                        sinrCell.id = 'sinr-header';
+                        tableHeader.insertBefore(sinrCell, tableHeader.querySelector('th:nth-child(11)')); // Insérer après la colonne Interférence
+                    }
+                    
+                    // Mettre à jour l'option de tri pour inclure SINR et Interférence
+                    const sortColumnSelect = document.getElementById('sort-column');
+                    if (sortColumnSelect && !sortColumnSelect.querySelector('option[value="sinr"]')) {
+                        // Ajouter l'option pour trier par interférence
+                        const interferenceOption = document.createElement('option');
+                        interferenceOption.value = 'interference';
+                        interferenceOption.textContent = 'Interférence';
+                        sortColumnSelect.insertBefore(interferenceOption, sortColumnSelect.querySelector('option[value="snr"]'));
+                        
+                        // Ajouter l'option pour trier par SINR
+                        const sinrOption = document.createElement('option');
+                        sinrOption.value = 'sinr';
+                        sinrOption.textContent = 'SINR';
+                        sortColumnSelect.insertBefore(sinrOption, sortColumnSelect.querySelector('option[value="dataRate"]'));
+                    }
+                }
+                
+                // Remplir le tableau avec les utilisateurs triés et filtrés
+                for (const user of filteredUsers) {
+                    const row = document.createElement('tr');
+                    
+                    // Convertir la distance en mètres
+                    const distanceInMeters = (user.distance / 10).toFixed(1);
+                    
+                    // Déterminer les classes CSS pour les colonnes colorées
+                    let signalClass = '';
+                    let sinrClass = '';
+                    
+                    if (user.signalStrength > -70) {
+                        signalClass = 'table-good';
+                    } else if (user.signalStrength > -90) {
+                        signalClass = 'table-medium';
+                    } else {
+                        signalClass = 'table-poor';
+                    }
+                    
+                    if (user.sinr > 20) {
+                        sinrClass = 'table-good';
+                    } else if (user.sinr > 10) {
+                        sinrClass = 'table-medium';
+                    } else {
+                        sinrClass = 'table-poor';
+                    }
+                    
+                    // Calculer le débit
+                    const dataRate = user.calculateDataRate();
+                    
+                    // Valeur d'interférence formatée
+                    const interferenceValue = user.interference > MIN_SIGNAL_STRENGTH ? 
+                        user.interference.toFixed(2) : 'N/A';
+                    
+                    // Construire la ligne du tableau avec les nouvelles colonnes
+                    row.innerHTML = `
+                        <td>${user.id}</td>
+                        <td>${user.connectedAntennaId}</td>
+                        <td>${distanceInMeters}</td>
+                        <td>${user.pathLoss.toFixed(2)}</td>
+                        <td>${user.isShadowed ? user.shadowingLoss.toFixed(2) : '0'}</td>
+                        <td>${user.fadingLoss.toFixed(2)}</td>
+                        <td>${user.isShadowed ? 'Rayleigh' : 'Rice'}</td>
+                        <td class="${signalClass}">${user.signalStrength.toFixed(1)}</td>
+                        <td>${user.noisePower.toFixed(2)}</td>
+                        <td>${interferenceValue}</td>
+                        <td>${user.snr.toFixed(2)}</td>
+                        <td class="${sinrClass}">${user.sinr.toFixed(2)}</td>
+                        <td>${dataRate}</td>
+                    `;
+                    
+                    // Ajouter un ID à la ligne pour faciliter la sélection
+                    row.setAttribute('id', `user-row-${user.id}`);
+                    
+                    // Ajouter un gestionnaire d'événements pour survoler l'utilisateur correspondant sur la simulation
+                    row.addEventListener('mouseenter', () => {
+                        this.hoveredUser = user;
+                        this.render();
+                    });
+                    
+                    row.addEventListener('mouseleave', () => {
+                        this.hoveredUser = null;
+                        this.render();
+                    });
+                    
+                    tableBody.appendChild(row);
+                }
+            }
+            
+            render() {
+                // Effacer le canvas
+                this.ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+                
+                // Dessiner le dégradé de couverture en premier (en arrière-plan)
+                if (this.showGradient) {
+                    this.drawCoverageGradient();
+                }
+                
+                // Dessiner les bâtiments
+                for (const building of this.buildings) {
+                    building.draw(this.ctx);
+                }
+                
+                // Dessiner les liens entre les antennes et les utilisateurs
+                for (const user of this.users) {
+                    // Récupérer l'antenne à laquelle l'utilisateur est connecté
+                    const connectedAntenna = this.antennas.find(ant => ant.id === user.connectedAntennaId);
+                    if (!connectedAntenna) continue;
+                    
+                    let linkColor;
+                    
+                    if (user.isShadowed) {
+                        linkColor = '#FF00FF'; // Magenta pour le shadowing
+                    } else if (user.signalStrength > -70) {
+                        linkColor = '#00FF00'; // Vert pour un bon signal
+                    } else if (user.signalStrength > -90) {
+                        linkColor = '#FFA500'; // Orange pour un signal moyen
+                    } else {
+                        linkColor = '#FF0000'; // Rouge pour un signal faible
+                    }
+                    
+                    // Dessiner le lien
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(connectedAntenna.x, connectedAntenna.y);
+                    this.ctx.lineTo(user.x, user.y);
+                    this.ctx.strokeStyle = linkColor;
+                    
+                    // Mettre en évidence le lien de l'utilisateur survolé
+                    if (user === this.hoveredUser) {
+                        this.ctx.lineWidth = 3;
+                    } else {
+                        this.ctx.lineWidth = 1;
+                    }
+                    
+                    this.ctx.stroke();
+                }
+                
+                // Dessiner les utilisateurs
+                for (const user of this.users) {
+                    this.ctx.beginPath();
+                    this.ctx.arc(user.x, user.y, user.radius, 0, Math.PI * 2);
+                    
+                    // Mettre en évidence l'utilisateur survolé
+                    if (user === this.hoveredUser) {
+                        this.ctx.fillStyle = '#FFFF00'; // Jaune pour l'utilisateur survolé
+                        this.ctx.fill();
+                        this.ctx.strokeStyle = '#000000';
+                        this.ctx.lineWidth = 2;
+                    } else {
+                        this.ctx.fillStyle = '#555555';
+                        this.ctx.fill();
+                        this.ctx.strokeStyle = '#333333';
+                        this.ctx.lineWidth = 1;
+                    }
+                    
+                    this.ctx.stroke();
+                }
+                
+                // Dessiner les antennes (en dernier pour qu'elles soient au-dessus)
+                for (const antenna of this.antennas) {
+                    antenna.draw(this.ctx);
+                }
+                
+                // Dessiner la légende du dégradé de couverture
+                this.drawCoverageLegend();
+            }
+            
+            drawCoverageLegend() {
+                // La légende est maintenant gérée dans le HTML, il suffit de contrôler sa visibilité
+                const coverageLegendContainer = document.getElementById('coverage-legend-container');
+                if (coverageLegendContainer) {
+                    coverageLegendContainer.style.display = this.showGradient ? 'block' : 'none';
+                }
+            }
+        }
+        
+        // Initialiser la simulation au chargement de la page
+        window.addEventListener('load', () => {
+            new Simulation();
+        });
+    </script>
+</body>
+</html>
